@@ -7,8 +7,6 @@ import { Configuration, OpenAIApi } from "openai";
 const enum Config {
   /** 预设 prompt */
   DEFAULT_PROMPT = "",
-  /** 企业微信应用 WECOM_BASE_URL */
-  WECOM_BASE_URL = "",
   /** 企业微信应用 corp_id */
   WECOM_CORPID = "",
   /** 企业微信应用 agentId */
@@ -22,6 +20,9 @@ const enum Config {
   /** openAIKey */
   OPEN_AI_KEY = "",
 }
+
+/** 企业微信应用 WECOM_BASE_URL */
+const WECOM_BASE_URL = "https://qyapi.weixin.qq.com";
 
 export async function main(ctx) {
   const logDate = getCurrentDateTime();
@@ -120,7 +121,7 @@ async function smartReply(content: { touser: any; message: string }) {
 
 async function sendWecom({ access_token, touser, content }) {
   const { data = {} } = await axios.post(
-    `${Config.WECOM_BASE_URL}/cgi-bin/message/send?access_token=${access_token}`,
+    `${WECOM_BASE_URL}/cgi-bin/message/send?access_token=${access_token}`,
     {
       touser,
       msgtype: "text",
@@ -143,7 +144,7 @@ async function getWecomAccessToken() {
   const {
     data: { access_token },
   } = await axios.get(
-    `${Config.WECOM_BASE_URL}/cgi-bin/gettoken?corpid=${Config.WECOM_CORPID}&corpsecret=${Config.WECOM_SECRET}`
+    `${WECOM_BASE_URL}/cgi-bin/gettoken?corpid=${Config.WECOM_CORPID}&corpsecret=${Config.WECOM_SECRET}`
   );
 
   setCache(CacheKey.ACCESS_TOKEN, access_token);
@@ -178,9 +179,7 @@ async function getPromptAnswer(prompt: string): Promise<string> {
 
     console.warn("🚀\n ~ 回复 ~:", data);
 
-    return (
-      data?.choices[0]?.message?.content?.trim() || "ヽ(･ω･´ﾒ) 我迷路啦 ~"
-    );
+    return data?.choices[0]?.message?.content?.trim() || "ヽ(･ω･´ﾒ) 我迷路啦 ~";
   } catch (err) {
     const { response } = err;
 
