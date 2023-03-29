@@ -130,7 +130,15 @@ async function sendWecom({ access_token, touser, content }) {
     }
   );
 
-  const { errcode } = data;
+  const { errcode, errmsg } = data;
+
+  if (errmsg) {
+    console.warn(
+      "🚀\n 企微发送错误 ~ file: index.ts:134 ~ sendWecom ~ errmsg:",
+      errmsg
+    );
+  }
+
   if ([40014, 42201, 42001].includes(errcode)) {
     cloud.shared.set("access_token", "");
     await sendWecom({ access_token, touser, content });
