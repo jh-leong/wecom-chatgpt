@@ -105,7 +105,6 @@ const enum CacheKey {
 }
 
 async function smartReply(content: { touser: any; message: string }) {
-  const access_token = await getWecomAccessToken();
   const message = content.message;
 
   if (getCache(CacheKey.PROMPT) === message) return;
@@ -116,10 +115,12 @@ async function smartReply(content: { touser: any; message: string }) {
 
   const answer = await getPromptAnswer(content.message);
 
-  await sendWecom({ ...content, access_token, content: answer });
+  await sendWecom({ ...content, content: answer });
 }
 
-async function sendWecom({ access_token, touser, content }) {
+async function sendWecom({ touser, content }) {
+  const access_token = await getWecomAccessToken();
+
   const { data = {} } = await axios.post(
     `${WECOM_BASE_URL}/cgi-bin/message/send?access_token=${access_token}`,
     {
@@ -140,8 +141,8 @@ async function sendWecom({ access_token, touser, content }) {
   }
 
   if ([40014, 42201, 42001].includes(errcode)) {
-    cloud.shared.set("access_token", "");
-    await sendWecom({ access_token, touser, content });
+    setCache(CacheKey.ACCESS_TOKEN, "");
+    await sendWecom({ touser, content });
   }
 }
 
