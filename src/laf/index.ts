@@ -60,7 +60,12 @@ function getCurrentDateTime() {
 
 interface ParseReturn {
   response: string;
-  content?: { touser: any; message: string };
+  content?: {
+    /** 用户名称 */
+    touser: any;
+    /** 消息内容 */
+    message: string;
+  };
 }
 
 async function parseMessage(
@@ -133,7 +138,7 @@ async function sendWecom({ touser, content }) {
 
   const { errcode, errmsg } = data;
 
-  if (errmsg) {
+  if (errmsg !== "ok") {
     console.warn(
       "🚀\n 企微发送错误 ~ file: index.ts:134 ~ sendWecom ~ errmsg:",
       errmsg
