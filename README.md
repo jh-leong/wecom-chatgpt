@@ -163,6 +163,8 @@ const enum Config {
 
 **在保存 `设置API接收` 之前**，我们需要先回到我们的云开发平台中，点击发布
 
+> ❗️ 发布前，请确保 WECOM_TOKEN 和 WECOM_ENCODING_AES_KEY 这两个字段已经写入噢，否则将无法保存！
+
 <img src="assets/2023_0328_22_12_14.png" width="600" height="auto">
 
 发布之后，点击发布按钮旁边的输入框，复制这个地址：
