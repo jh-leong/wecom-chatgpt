@@ -4,25 +4,64 @@ import xml2js from "xml2js";
 import { decrypt, getSignature } from "@wecom/crypto";
 import { Configuration, OpenAIApi } from "openai";
 
-const enum Config {
+const Config = {
+  /** 1: 启用上下文, 0: 关闭上下文 */
+  USE_CHAT_CONTEXT: 0,
   /** 预设 prompt */
-  DEFAULT_PROMPT = "",
+  DEFAULT_PROMPT: "",
   /** 企业微信应用 corp_id */
-  WECOM_CORPID = "",
+  WECOM_CORPID: "",
   /** 企业微信应用 agentId */
-  WECOM_AGENT_ID = "",
+  WECOM_AGENT_ID: "",
   /** 企业微信应用 app_secret */
-  WECOM_SECRET = "",
+  WECOM_SECRET: "",
   /** 企业微信应用 token */
-  WECOM_TOKEN = "",
+  WECOM_TOKEN: "",
   /** 企业微信应用 encodingAESKey */
-  WECOM_ENCODING_AES_KEY = "",
+  WECOM_ENCODING_AES_KEY: "",
   /** openAIKey */
-  OPEN_AI_KEY = "",
-}
+  OPEN_AI_KEY: "",
+} as const;
 
 /** 企业微信应用 WECOM_BASE_URL */
 const WECOM_BASE_URL = "https://qyapi.weixin.qq.com";
+
+class CloudHelper {
+  #HISTORY_COLLECTION = "history";
+
+  getCache(key: CacheKey) {
+    return cloud.shared.get(key);
+  }
+
+  setCache(key: CacheKey, value: any) {
+    return cloud.shared.set(key, value);
+  }
+
+  get historyCollection() {
+    return cloud.database().collection(this.#HISTORY_COLLECTION);
+  }
+
+  async getUserMessageHistory(id: string): Promise<string[]> {
+    const { data = {} } = await this.historyCollection.doc(id).get();
+    return data.message || [];
+  }
+
+  async setUserMessageHistory(id: string, message: string[]) {
+    return await this.historyCollection.doc(id).set({ message });
+  }
+
+  async updateUserMessage({ touser, message }: ParseContent) {
+    const historyMessage = await this.getUserMessageHistory(touser);
+
+    const newMessages = [...historyMessage, message];
+
+    await this.setUserMessageHistory(touser, newMessages);
+
+    return { newMessages, historyMessage };
+  }
+}
+
+const cloudHelper = new CloudHelper();
 
 export async function main(ctx) {
   const logDate = getCurrentDateTime();
@@ -35,7 +74,12 @@ export async function main(ctx) {
 
     const { response = "", content } = await parseMessage(body, query);
 
-    content && (await smartReply(content));
+    if (content) {
+      await sendWecom({
+        touser: content.touser,
+        content: await getReplyContent(content),
+      });
+    }
 
     return response;
   } catch (err) {
@@ -58,14 +102,16 @@ function getCurrentDateTime() {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
+interface ParseContent {
+  /** 用户名称 */
+  touser: any;
+  /** 消息内容 */
+  message: string;
+}
+
 interface ParseReturn {
   response: string;
-  content?: {
-    /** 用户名称 */
-    touser: any;
-    /** 消息内容 */
-    message: string;
-  };
+  content?: ParseContent;
 }
 
 async function parseMessage(
@@ -105,25 +151,45 @@ async function parseMessage(
 }
 
 const enum CacheKey {
-  PROMPT = "promtp",
+  PROMPT = "prompt",
   ACCESS_TOKEN = "access_token",
 }
 
-async function smartReply(content: { touser: any; message: string }) {
+const enum SystemCommand {
+  /** 清空上下文 */
+  CLEAN_CONTEXT = "#清空",
+}
+
+async function getReplyContent(
+  content: ParseContent
+): Promise<string | undefined> {
+  if (!content) return;
+
+  const { message, touser } = content;
+
+  if (message === SystemCommand.CLEAN_CONTEXT) {
+    await cloudHelper.setUserMessageHistory(touser, []);
+    return `用户 ${touser} 上下文已清空 ~`;
+  } else {
+    return await getSmartReply(content);
+  }
+}
+
+async function getSmartReply(content: ParseContent) {
   const message = content.message;
 
-  if (getCache(CacheKey.PROMPT) === message) return;
+  if (cloudHelper.getCache(CacheKey.PROMPT) === message) return;
 
-  setCache(CacheKey.PROMPT, content.message);
+  cloudHelper.setCache(CacheKey.PROMPT, content.message);
 
   console.warn("🚀\n ~ 问题 ~:", content.message);
 
-  const answer = await getPromptAnswer(content.message);
-
-  await sendWecom({ ...content, content: answer });
+  return await getPromptAnswer(content);
 }
 
 async function sendWecom({ touser, content }) {
+  if (!content) return;
+
   const access_token = await getWecomAccessToken();
 
   const { data = {} } = await axios.post(
@@ -138,21 +204,20 @@ async function sendWecom({ touser, content }) {
 
   const { errcode, errmsg } = data;
 
-  if (errmsg !== "ok") {
+  // token 过期
+  if ([40014, 42201, 42001].includes(errcode)) {
+    cloudHelper.setCache(CacheKey.ACCESS_TOKEN, "");
+    await sendWecom({ touser, content });
+  } else if (errmsg !== "ok") {
     console.warn(
       "🚀\n 企微发送错误 ~ file: index.ts:134 ~ sendWecom ~ errmsg:",
       errmsg
     );
   }
-
-  if ([40014, 42201, 42001].includes(errcode)) {
-    setCache(CacheKey.ACCESS_TOKEN, "");
-    await sendWecom({ touser, content });
-  }
 }
 
 async function getWecomAccessToken() {
-  const cache = getCache(CacheKey.ACCESS_TOKEN);
+  const cache = cloudHelper.getCache(CacheKey.ACCESS_TOKEN);
   if (cache) return cache;
 
   const {
@@ -161,20 +226,43 @@ async function getWecomAccessToken() {
     `${WECOM_BASE_URL}/cgi-bin/gettoken?corpid=${Config.WECOM_CORPID}&corpsecret=${Config.WECOM_SECRET}`
   );
 
-  setCache(CacheKey.ACCESS_TOKEN, access_token);
+  cloudHelper.setCache(CacheKey.ACCESS_TOKEN, access_token);
 
   return access_token;
 }
 
-function getCache(key: CacheKey) {
-  return cloud.shared.get(key);
+interface ChatMessage {
+  role: "system" | "user";
+  content: string;
 }
 
-function setCache(key: CacheKey, value: any) {
-  return cloud.shared.set(key, value);
+async function getChatMessage(
+  content: ParseContent
+): Promise<Array<ChatMessage>> {
+  const { message = "" } = content;
+
+  const userMessage: ChatMessage[] = [{ role: "user", content: message }];
+
+  if (Config.USE_CHAT_CONTEXT) {
+    const { historyMessage = [] } = await cloudHelper.updateUserMessage(
+      content
+    );
+
+    return [
+      ...historyMessage.map((content = "") => {
+        return {
+          role: "system",
+          content,
+        } as const;
+      }),
+      ...userMessage,
+    ];
+  } else {
+    return userMessage;
+  }
 }
 
-async function getPromptAnswer(prompt: string): Promise<string> {
+async function getPromptAnswer(content: ParseContent): Promise<string> {
   try {
     const configuration = new Configuration({
       apiKey: Config.OPEN_AI_KEY,
@@ -182,12 +270,14 @@ async function getPromptAnswer(prompt: string): Promise<string> {
 
     const openai = new OpenAIApi(configuration);
 
+    const messages: ChatMessage[] = [
+      { role: "system", content: Config.DEFAULT_PROMPT },
+      ...(await getChatMessage(content)),
+    ];
+
     const { data } = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: Config.DEFAULT_PROMPT },
-        { role: "user", content: prompt },
-      ],
+      messages,
       max_tokens: 1024,
     });
 
