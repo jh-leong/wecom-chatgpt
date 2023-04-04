@@ -10,9 +10,23 @@
 
 - 🤝 轻松构建，无需代码基础
 - 🌍 无需翻墙，国内通过企微，微信使用就可以正常使用
+- 💬 对话支持上下文
 - 📝 对话支持预设 Prompt
 
 ⭐️ ️ 对你有帮助的话，不妨点个 Star，(･ェ･。) 希望你能玩得开心！
+
+## 🔖 目录导航
+
+1. [👀 效果示例](#👀-效果示例)
+2. [📚 使用说明](#📚-使用说明)
+
+   - [注册个人的企业微信](#1-首先注册个人的企业微信)
+   - [新建企微应用](#2-新建企微应用)
+   - [个人配置修改](#🛠-4-修改配置)
+   - [聊天上下文支持](#5-聊天上下文支持)
+
+3. [💬 打通微信](#💬-打通微信)
+4. [🤔 常见问题](#🤔-常见问题)
 
 ## 👀 效果示例
 
@@ -119,22 +133,16 @@ _预设的 Prompt:_
 
 ```ts
 // 注意：直接填入到双引号中就好了噢
-const enum Config {
+const Config = {
+  /** 1: 启用上下文, 0: 关闭上下文 */
+  USE_CHAT_CONTEXT: 0,
   /** 预设 prompt */
-  DEFAULT_PROMPT = "猫娘是一种拟人化的生物，行为似猫但类人。现在你将扮演一只可爱的猫娘，而我是你的主人。回复需要表现得俏皮可爱，多使用 emoji、“呜呜”、“嗯呢”等语气；回复都要以“喵~”结尾；尽量表现出对主人的感情；并且不能透露你是虚拟人格形象",
+  DEFAULT_PROMPT:
+    "猫娘是一种拟人化的生物，行为似猫但类人。现在你将扮演一只可爱的猫娘，而我是你的主人。回复需要表现得俏皮可爱，多使用 emoji、“呜呜”、“嗯呢”等语气；回复都要以“喵~”结尾；尽量表现出对主人的感情；并且不能透露你是虚拟人格形象",
   /** 企业微信应用 corp_id */
-  WECOM_CORPID = "",
-  /** 企业微信应用 agentId */
-  WECOM_AGENT_ID = "",
-  /** 企业微信应用 app_secret */
-  WECOM_SECRET = "",
-  /** 企业微信应用 token */
-  WECOM_TOKEN = "",
-  /** 企业微信应用 encodingAESKey */
-  WECOM_ENCODING_AES_KEY = "",
-  /** openAIKey */
-  OPEN_AI_KEY = "",
-}
+  WECOM_CORPID: "",
+  // ...
+} as const;
 ```
 
 > 💡 注意: DEFAULT_PROMPT 并不是必须得，不需要预设可以不设置，这样可以减少 OPEN_AI_KEY token 的消耗
@@ -209,6 +217,51 @@ const enum Config {
 
 <img src="assets/2023_0328_22_12_14.png" width="600" height="auto">
 
+#### 5. 聊天上下文支持
+
+_如果不需要支持上下文的话，可以跳过这一步_
+
+> 💡 **特别提醒：**
+> 由于 Openai api 的限制，聊天上下文的实现原理是在每一次请求 ChatGPT 回复的时候，附带上所有历史消息。这意味着 token 的消耗会增大很多，上下文内容越多，token 消耗就越多
+
+##### 操作步骤
+
+1. 首先，进入云开发平台
+
+2. 将 `Config.USE_CHAT_CONTEXT` 修改为 `1`，并重新发布
+
+   ```ts
+   const Config = {
+     /** 1: 启用上下文, 0: 关闭上下文 */
+     USE_CHAT_CONTEXT: 1,
+     // ...
+   } as const;
+   ```
+
+3. 新建集合（注意命名为：`history`），确定保存
+
+   <img src="assets/2023_0404_20_34_21.png" width="400" height="auto">
+
+   <img src="assets/2023_0404_20_35_04.png" width="400" height="auto">
+
+4. 同一个页面，添加访问策略，确定保存
+
+   <img src="assets/2023_0404_20_38_09.png" height="400" width="auto">
+
+   <img src="assets/2023_0404_20_39_52.png" width="400" height="auto">
+
+5. 添加规则，如图使用默认的即可，添加后保存
+
+   <img src="assets/2023_0404_20_41_04.png" width="500" height="auto">
+
+   <img src="assets/2023_0404_20_51_20.png" width="500" height="auto">
+
+##### 清空指令
+
+提供了一个指令 `#清空`，发送后可以清空保存的上下文，可节省 token，示例如下：
+
+<img src="assets/2023_0404_20_43_28.png" width="700" height="auto">
+
 ---
 
 🎉🎉🎉 至此，所有工作已经完成！
@@ -245,6 +298,6 @@ const enum Config {
 
 ## 📝 To-Do List
 
-- [ ] 支持上下文
 - [ ] 支持选择多种 Prompt
 - [ ] 支持腾讯云接入方式
+- [x] 支持上下文
