@@ -93,9 +93,9 @@ _预设的 Prompt:_
 
 <img src="assets/2023_0328_21_24_00.png" width="400" height="auto">
 
-如下图配置，点击确定保存
+如下图配置，点击确定保存 （注意勾选 `GET` 和 `POST`）
 
-<img src="assets/2023_0328_21_28_33.png" width="600" height="auto">
+<img src="assets/2023_0404_13_48_28.png" width="600" height="auto">
 
 然后在中间编辑器中复制一份我提供的 [laf 云函数源码](src/laf/index.ts)
 
