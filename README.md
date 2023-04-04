@@ -227,7 +227,7 @@ const enum Config {
 
 ## 🤔 常见问题
 
-todo...
+可见 [已提出的 Issue](https://github.com/jh-leong/wecom-chatgpt/issues?q=)
 
 如果你遇到了其他问题，可以在项目的 [Issue 页面](https://github.com/jh-leong/wecom-chatgpt/issues) 上提出。我会尽快回复并解决问题。
 
