@@ -275,17 +275,32 @@ async function getPromptAnswer(content: ParseContent): Promise<string> {
       ...(await getChatMessage(content)),
     ];
 
-    const { data } = await openai.createChatCompletion({
+    console.warn(
+      "🚀\n ~ file: index.ts:277 ~ getPromptAnswer ~ messages:",
+      messages
+    );
+
+    const response = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages,
       max_tokens: 1024,
     });
 
-    console.warn("🚀\n ~ 回复 ~:", data);
+    console.warn(
+      "🚀\n ~ file: index.ts:288 ~ getPromptAnswer ~ openai.createChatCompletion response",
+      response
+    );
 
-    return data?.choices[0]?.message?.content?.trim() || "ヽ(･ω･´ﾒ) 我迷路啦 ~";
+    console.warn("🚀\n ~ 回复 ~:", response?.data);
+
+    return (
+      response?.data?.choices[0]?.message?.content?.trim() ||
+      `ヽ(･ω･´ﾒ) 我迷路啦 ~ openai 返回错误 response: ${JSON.stringify(
+        response || "undefined"
+      )}`
+    );
   } catch (err) {
-    const { response } = err;
+    const { response = {} } = err || {};
 
     console.warn(
       "🚀\n ~ file: Untitled-1:137 ~ getPromptAnswer ~ response.data:",
