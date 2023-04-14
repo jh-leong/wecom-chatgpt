@@ -43,7 +43,7 @@ class CloudHelper {
 
   async getUserMessageHistory(id: string): Promise<string[]> {
     const { data = {} } = await this.historyCollection.doc(id).get();
-    return data.message || [];
+    return data?.message || [];
   }
 
   async setUserMessageHistory(id: string, message: string[]) {
@@ -51,13 +51,21 @@ class CloudHelper {
   }
 
   async updateUserMessage({ touser, message }: ParseContent) {
-    const historyMessage = await this.getUserMessageHistory(touser);
+    try {
+      const historyMessage = await this.getUserMessageHistory(touser);
 
-    const newMessages = [...historyMessage, message];
+      const newMessages = [...historyMessage, message];
 
-    await this.setUserMessageHistory(touser, newMessages);
+      await this.setUserMessageHistory(touser, newMessages);
 
-    return { newMessages, historyMessage };
+      return { newMessages, historyMessage };
+    } catch (err) {
+      console.warn(
+        "🚀\n ~ file: index.ts:63 ~ CloudHelper ~ updateUserMessage ~ err:",
+        err
+      );
+      return { newMessages: [], historyMessage: [] };
+    }
   }
 }
 
@@ -283,7 +291,6 @@ async function getPromptAnswer(content: ParseContent): Promise<string> {
     const response = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages,
-      max_tokens: 1024,
     });
 
     console.warn(
