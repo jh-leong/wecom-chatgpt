@@ -1,5 +1,11 @@
 # 🤖 wecom-chatgpt
 
+---
+
+ ❗️ 重要：由于企微更新域名校验的相关规则 [见此 issue](https://github.com/jh-leong/wecom-chatgpt/issues/11#issuecomment-1535791921)，个人开发者可能碰到 ‘企业微信主体域名校验无法通过’ 的情况，无法解决的话此项目将无法使用
+ 
+---
+
 本项目基于企业微信和云开发平台，帮助你轻松构建可在企业微信、微信使用的个人 ChatGPT 应用
 
 > 🧑‍💻 [ChatGPT](https://chat.openai.com/chat) 模型是由 [OpenAI](https://openai.com/) 训练的大型语言模型，能够生成类似于人类的文本。只需要提供一个提示，它就能够生成延续对话或者扩展给定提示的回应。
